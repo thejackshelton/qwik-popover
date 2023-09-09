@@ -4,12 +4,28 @@ import type { DocumentHead } from "@builder.io/qwik-city";
 export default component$(() => {
   return (
     <>
-      <h1>Hi 👋</h1>
-      <p>
-        Can't wait to see what you build with qwik!
-        <br />
-        Happy coding.
-      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
+        <div>
+          <div>Popover API</div>
+          <div>
+            <a href="/popover-api">Navigate</a>
+          </div>
+        </div>
+
+        <div>
+          <div>Polyfill</div>
+          <div>
+            <a href="/polyfill">Navigate</a>
+          </div>
+        </div>
+
+        <div>
+          <div>Portal</div>
+          <div>
+            <a href="/portal">Navigate</a>
+          </div>
+        </div>
+      </div>
     </>
   );
 });
