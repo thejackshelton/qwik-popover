@@ -28,11 +28,15 @@ export const Popover = component$((props: PopoverRootProps) => {
 
   useVisibleTask$(() => () => base.value?.appendChild(child.value as Node));
 
+  type ToggleEvent = {
+    newState: string;
+  };
+
   return (
     <div ref={base}>
       <div
         {...props}
-        onToggle$={(e) => {
+        onToggle$={(e: ToggleEvent) => {
           if (isSupported) {
             return;
           }
