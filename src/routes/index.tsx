@@ -25,6 +25,12 @@ export default component$(() => {
             <a href="/portal">Navigate</a>
           </div>
         </div>
+        <div>
+          <div>Implementation</div>
+          <div>
+            <a href="/impl">Navigate</a>
+          </div>
+        </div>
       </div>
     </>
   );

@@ -1,11 +1,43 @@
-import { type QwikIntrinsicElements, Slot, component$ } from "@builder.io/qwik";
+// src/routes/impl/popover.tsx
+import {
+  type QwikIntrinsicElements,
+  Slot,
+  component$,
+  useSignal,
+  useVisibleTask$,
+} from "@builder.io/qwik";
 
-type PopoverRootProps = QwikIntrinsicElements["div"];
+type PopoverRootProps = QwikIntrinsicElements["div"] & {
+  id: string; // Add this line
+};
+
+import { isPopoverSupported } from "./utils";
 
 export const Popover = component$(({ id, ...props }: PopoverRootProps) => {
+  useVisibleTask$(async () => {
+    const isSupported = await isPopoverSupported();
+
+    if (!isSupported) {
+      import("../../../node_modules/@oddbird/popover-polyfill/dist/popover");
+      console.log("I ran!");
+    }
+  });
+
+  console.log("render Popover");
+  const base = useSignal<HTMLElement>();
+  const child = useSignal<HTMLElement>();
+
+  console.log(`Popover.tsx`);
+
+  useVisibleTask$(() => () => base.value?.appendChild(child.value as Node));
+
   return (
-    <div id={id} {...props}>
-      <Slot />
+    <div id={id} popover>
+      <div data-base-id={`${id}-base`} {...props} ref={base}>
+        <div data-child-id={`${id}-child`} ref={child}>
+          <Slot />
+        </div>
+      </div>
     </div>
   );
 });
