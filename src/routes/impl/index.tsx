@@ -6,7 +6,8 @@ import { PopoverTrigger } from "./popover-trigger";
 export default component$(() => {
   return (
     <>
-      <PopoverTrigger popovertarget="my-first-popover">Trigger!</PopoverTrigger>
+      {/* <PopoverTrigger popovertarget="my-first-popover">Trigger!</PopoverTrigger> */}
+      <button popovertarget="my-first-popover">Trigger!</button>
       <Popover id="my-first-popover">Content!</Popover>
     </>
   );

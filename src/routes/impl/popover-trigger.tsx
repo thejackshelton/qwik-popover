@@ -15,7 +15,7 @@ type PopoverTriggerProps = QwikIntrinsicElements["button"] & {
 
 export const PopoverTrigger = component$<PopoverTriggerProps>(
   ({ popovertarget, ...props }) => {
-    const popoverRef = useSignal<HTMLDivElement>();
+    const triggerRef = useSignal<HTMLButtonElement>();
 
     useVisibleTask$(
       async () => {
@@ -40,7 +40,7 @@ export const PopoverTrigger = component$<PopoverTriggerProps>(
 
           console.log("PopoverTrigger.tsx");
 
-          popoverRef.value?.addEventListener("click", () => {
+          triggerRef.value?.addEventListener("click", () => {
             if (!child || !base) {
               console.warn(
                 `Child or base not found in popover "${popovertarget}"`
@@ -62,7 +62,7 @@ export const PopoverTrigger = component$<PopoverTriggerProps>(
     );
 
     return (
-      <button popovertarget={popovertarget} ref={popoverRef} {...props}>
+      <button popovertarget={popovertarget} ref={triggerRef} {...props}>
         <Slot />
       </button>
     );

@@ -8,20 +8,20 @@ import {
 } from "@builder.io/qwik";
 
 type PopoverRootProps = QwikIntrinsicElements["div"] & {
-  id: string; // Add this line
+  id: string;
 };
 
-import { isPopoverSupported } from "./utils";
+const isSupported =
+  typeof HTMLElement !== "undefined" &&
+  typeof HTMLElement.prototype === "object" &&
+  "popover" in HTMLElement.prototype;
+
+import "../../../node_modules/@oddbird/popover-polyfill/dist/popover.css";
 
 export const Popover = component$(({ id, ...props }: PopoverRootProps) => {
   useVisibleTask$(async () => {
-    const isSupported = await isPopoverSupported();
-
     if (!isSupported) {
       import("../../../node_modules/@oddbird/popover-polyfill/dist/popover");
-      import(
-        "../../../node_modules/@oddbird/popover-polyfill/dist/popover.css"
-      );
       console.log("I ran!");
     }
   });
@@ -36,7 +36,26 @@ export const Popover = component$(({ id, ...props }: PopoverRootProps) => {
 
   return (
     <div data-base-id={`${id}-base`} {...props} ref={base}>
-      <div data-child-id={`${id}-child`} ref={child} id={id} popover>
+      <div
+        id={id}
+        onToggle$={(e) => {
+          console.log("I am running", e);
+          if (isSupported) {
+            return;
+          }
+
+          if (e.newState === "open") {
+            document.body.appendChild(child.value!);
+            console.log("body");
+          } else {
+            base.value!.appendChild(child.value!);
+            console.log("not body");
+          }
+        }}
+        data-child-id={`${id}-child`}
+        ref={child}
+        popover
+      >
         <Slot />
       </div>
     </div>
