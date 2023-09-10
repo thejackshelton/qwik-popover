@@ -33,7 +33,7 @@ export const Popover = component$((props: PopoverRootProps) => {
   };
 
   return (
-    <div ref={base}>
+    <div aria-hidden={true} ref={base}>
       <div
         {...props}
         onToggle$={(e: ToggleEvent) => {

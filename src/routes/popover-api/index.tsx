@@ -6,14 +6,10 @@ export default component$(() => {
     <>
       <div class="relative">
         <button popovertarget="mypopover">Toggle the popover</button>
-        <div style={{ position: "absolute" }} id="mypopover" popover="manual">
+        <div style={{ position: "absolute" }} id="mypopover" popover>
           Button content
         </div>
-        <div
-          style={{ position: "absolute", top: "10px" }}
-          id="myinput"
-          popover="manual"
-        >
+        <div style={{ position: "absolute", top: "10px" }} id="myinput" popover>
           Input Content
         </div>
         <input type="button" popovertarget="myinput" />
