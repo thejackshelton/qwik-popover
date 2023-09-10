@@ -19,6 +19,9 @@ export const Popover = component$(({ id, ...props }: PopoverRootProps) => {
 
     if (!isSupported) {
       import("../../../node_modules/@oddbird/popover-polyfill/dist/popover");
+      import(
+        "../../../node_modules/@oddbird/popover-polyfill/dist/popover.css"
+      );
       console.log("I ran!");
     }
   });
@@ -32,9 +35,9 @@ export const Popover = component$(({ id, ...props }: PopoverRootProps) => {
   useVisibleTask$(() => () => base.value?.appendChild(child.value as Node));
 
   return (
-    <div id={id} popover>
+    <div>
       <div data-base-id={`${id}-base`} {...props} ref={base}>
-        <div data-child-id={`${id}-child`} ref={child}>
+        <div data-child-id={`${id}-child`} ref={child} id={id} popover>
           <Slot />
         </div>
       </div>
