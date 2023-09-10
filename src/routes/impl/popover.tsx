@@ -35,11 +35,9 @@ export const Popover = component$(({ id, ...props }: PopoverRootProps) => {
   useVisibleTask$(() => () => base.value?.appendChild(child.value as Node));
 
   return (
-    <div>
-      <div data-base-id={`${id}-base`} {...props} ref={base}>
-        <div data-child-id={`${id}-child`} ref={child} id={id} popover>
-          <Slot />
-        </div>
+    <div data-base-id={`${id}-base`} {...props} ref={base}>
+      <div data-child-id={`${id}-child`} ref={child} id={id} popover>
+        <Slot />
       </div>
     </div>
   );
