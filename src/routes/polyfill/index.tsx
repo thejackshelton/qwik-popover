@@ -26,14 +26,14 @@ export default component$(() => {
 
   return (
     <>
-      <div id="button-popover" popover>
+      <div id="button-popover" popover="manual">
         Button Popover Content
       </div>
 
       <div
         id="input-popover"
         style={{ position: "absolute", top: "50px" }}
-        popover
+        popover="manual"
       >
         Input Popover Content
       </div>

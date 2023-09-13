@@ -21,24 +21,24 @@ export const Popover = component$(() => {
   const base = useSignal<HTMLElement>();
   const child = useSignal<HTMLElement>();
 
-  useVisibleTask$(() => () => base.value?.appendChild?.(child.value));
+  useVisibleTask$(() => () => base.value?.appendChild(child.value!));
 
   return (
-    <div>
+    <div class="POPOVER">
       <button
         onClick$={() => {
-          if (child.value.parentElement === base.value) {
-            document.body.appendChild(child.value);
+          if (child.value!.parentElement === base.value) {
+            document.body.appendChild(child.value!);
           } else {
-            base.value.appendChild(child.value);
+            base.value!.appendChild(child.value!);
           }
         }}
       >
         Toggle popout
       </button>
-      <div ref={base}>
-        <div ref={child}>
-          <Slot />
+      <div ref={base} class="BASE">
+        <div ref={child} class="CHILD">
+          <Slot name="myslot" />
         </div>
       </div>
     </div>
@@ -56,10 +56,12 @@ export const Demo = component$(() => {
       <button onClick$={() => (pop.value = !pop.value)}>Toggle popover</button>
       {pop.value && (
         <Popover>
-          Hello! Internal state: <Count /> and timer context: {ctx.value}
-          <div>
-            external state: <button onClick$={() => likes.value++}>👍</button>{" "}
-            {Array.from({ length: likes.value }).map(() => "👍")}
+          <div q:slot="myslot">
+            Hello! Internal state: <Count /> and timer context: {ctx.value}
+            <div>
+              external state: <button onClick$={() => likes.value++}>👍</button>{" "}
+              {Array.from({ length: likes.value }).map(() => "👍")}
+            </div>
           </div>
         </Popover>
       )}
