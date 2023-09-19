@@ -20,7 +20,7 @@ declare global {
   }
 }
 
-export const Popover = component$(({ id, ...props }: PopoverProps) => {
+export const Popover = component$((props: PopoverProps) => {
   // We must inject some minimal hiding CSS while the polyfill loads
   useStyles$(popoverStyles);
 
@@ -39,7 +39,7 @@ export const Popover = component$(({ id, ...props }: PopoverProps) => {
       if (document.querySelector('style[data-qwik-ui-popover-polyfill]'))
         return;
       const [{ default: css }] = await Promise.all([
-        import('@oddbird/popover-polyfill/css?inline'),
+        import('@oddbird/popover-polyfill/dist/popover.css?inline'),
         import('@oddbird/popover-polyfill'),
       ]);
       // Inject CSS into head
@@ -100,29 +100,34 @@ export const Popover = component$(({ id, ...props }: PopoverProps) => {
 
   /**
    * We put our popover div in a div we control so we can teleport it out and back without worry
+   * The data-popover-pf div is used to signal loading of the polyfill. It receives the useOn().
+   * It is hidden by CSS when popover is supported, so then it never fires.
    */
   return (
-    <div ref={baseRef} {...props}>
-      <div
-        id={id}
-        onToggle$={
-          // isServer || document.__QUI_POPOVER_PF__?
-          (e: ToggleEvent) => {
-            if (!document.__QUI_POPOVER_PF__) {
-              return;
-            }
+    <>
+      <div data-qui-popover-pf />
+      <div ref={baseRef}>
+        <div
+          id={props.id}
+          onToggle$={
+            isServer || document.__QUI_POPOVER_PF__
+              ? $((e: ToggleEvent) => {
+                  if (!document.__QUI_POPOVER_PF__) {
+                    return;
+                  }
 
-            console.log(`TOGGLE!`);
+                  console.log(`TOGGLE!`);
 
-            shouldTeleportSig.value = e.newState === 'open';
+                  shouldTeleportSig.value = e.newState === 'open';
+                })
+              : undefined
           }
-          // : undefined
-        }
-        ref={childRef}
-        popover
-      >
-        <Slot />
+          ref={childRef}
+          popover
+        >
+          <Slot />
+        </div>
       </div>
-    </div>
+    </>
   );
 });
