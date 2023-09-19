@@ -41,6 +41,7 @@ export const Popover = component$((props: PopoverRootProps) => {
         import("@oddbird/popover-polyfill/css?inline"),
         import("@oddbird/popover-polyfill"),
       ]);
+      // Inject CSS into head
       const styleNode = document.createElement("style");
       styleNode.setAttribute("data-qwik-ui-popover-polyfill", "");
       styleNode.textContent = css;
@@ -48,21 +49,52 @@ export const Popover = component$((props: PopoverRootProps) => {
     })
   );
 
-  const base = useSignal<HTMLElement>();
-  const child = useSignal<HTMLElement>();
-  const popped = useSignal(false);
-  useTask$(({ track }) => {
-    const popState = track(() => popped.value);
-    if (isServer || !popState) return;
-    return () => base.value?.appendChild(child.value as Node);
+  const baseRef = useSignal<HTMLElement>();
+  const childRef = useSignal<HTMLElement>();
+  const shouldTeleportSig = useSignal(false);
+  const didClientRenderSig = useSignal(false);
+  useTask$(({ track, cleanup }) => {
+    const poppedOut = track(() => shouldTeleportSig.value);
+    if (isServer || !poppedOut) return;
+
+    // we need to rerender once on the client
+    const didClientRender = track(() => didClientRenderSig.value);
+    if (!didClientRender) {
+      // ask to rerender
+      didClientRenderSig.value = true;
+      // prepare to be called again;
+      shouldTeleportSig.value = false;
+      return;
+    }
+
+    let containerDiv: HTMLDivElement | null = document.querySelector(
+      "div[data-qwik-ui-popover-polyfill]"
+    );
+    if (!containerDiv) {
+      containerDiv = document.createElement("div");
+      containerDiv.setAttribute("data-qwik-ui-popover-polyfill", "");
+      containerDiv.style.position = "absolute";
+      document.body.appendChild(containerDiv!);
+    }
+    containerDiv.appendChild(childRef.value!);
+
+    cleanup(() => baseRef.value?.appendChild(childRef.value as Node));
   });
 
   type ToggleEvent = {
     newState: string;
   };
 
+  // This forces a re-render when the signal changes
+  const forceRerender = !!didClientRenderSig.value;
+  if (forceRerender) {
+    console.log("yey rerendered");
+    // Now pop out again to run the task
+    setTimeout(() => (shouldTeleportSig.value = true), 0);
+  }
+
   return (
-    <div aria-hidden={true} ref={base}>
+    <div ref={baseRef}>
       <div
         {...props}
         onToggle$={(e: ToggleEvent) => {
@@ -71,24 +103,10 @@ export const Popover = component$((props: PopoverRootProps) => {
           }
 
           console.log(`TOGGLE!`);
-          if (e.newState === "open") {
-            let containerDiv: HTMLDivElement | null = document.querySelector(
-              "div[data-qwik-ui-popover-polyfill]"
-            );
-            if (!containerDiv) {
-              containerDiv = document.createElement("div");
-              containerDiv.setAttribute("data-qwik-ui-popover-polyfill", "");
-              containerDiv.style.position = "absolute";
-              document.body.appendChild(containerDiv!);
-            }
-            containerDiv.appendChild(child.value!);
-            popped.value = true;
-          } else {
-            base.value!.appendChild(child.value!);
-            popped.value = false;
-          }
+
+          shouldTeleportSig.value = e.newState === "open";
         }}
-        ref={child}
+        ref={childRef}
         popover
       >
         <Slot />

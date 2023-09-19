@@ -2,12 +2,12 @@ import {
   component$,
   useSignal,
   useVisibleTask$,
-  Slot,
   createContextId,
   useContext,
   useContextProvider,
 } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
+import { Popover } from "../impl/popover";
 
 const cId = createContextId<any>("ctx");
 
@@ -16,7 +16,7 @@ export const Count = component$(() => {
   return <u onClick$={() => count.value++}>Count: {count.value} (click me)</u>;
 });
 
-export const Popover = component$(() => {
+export const MyPopover = component$(() => {
   console.log("render Popover");
   const base = useSignal<HTMLElement>();
   const child = useSignal<HTMLElement>();
@@ -36,11 +36,6 @@ export const Popover = component$(() => {
       >
         Toggle popout
       </button>
-      <div ref={base} class="BASE">
-        <div ref={child} class="CHILD">
-          <Slot name="myslot" />
-        </div>
-      </div>
     </div>
   );
 });
@@ -53,15 +48,16 @@ export const Demo = component$(() => {
   return (
     <div>
       <div>Before</div>
-      <button onClick$={() => (pop.value = !pop.value)}>Toggle popover</button>
+      <button onClick$={() => (pop.value = !pop.value)}>
+        Toggle popover render
+      </button>
+      <button popovertarget="hello">Toggle popout</button>
       {pop.value && (
-        <Popover>
-          <div q:slot="myslot">
-            Hello! Internal state: <Count /> and timer context: {ctx.value}
-            <div>
-              external state: <button onClick$={() => likes.value++}>👍</button>{" "}
-              {Array.from({ length: likes.value }).map(() => "👍")}
-            </div>
+        <Popover id="hello">
+          Hello! Internal state: <Count /> and timer context: {ctx.value}
+          <div>
+            external state: <button onClick$={() => likes.value++}>👍</button>{" "}
+            {Array.from({ length: likes.value }).map(() => "👍")}
           </div>
         </Popover>
       )}
