@@ -8,19 +8,19 @@ import {
   $,
   useTask$,
   useStyles$,
-} from "@builder.io/qwik";
+} from '@builder.io/qwik';
 
-import { isServer } from "@builder.io/qwik/build";
-import popoverStyles from "./popover.css?inline";
+import { isServer } from '@builder.io/qwik/build';
+import popoverStyles from './popover.css?inline';
 
-type PopoverProps = QwikIntrinsicElements["div"];
+type PopoverProps = QwikIntrinsicElements['div'];
 
 declare global {
   interface Document {
     __NEEDS_POPOVER__?: true;
   }
   interface HTMLDivElement {
-    popover?: "manual" | "auto" | true;
+    popover?: 'manual' | 'auto' | true;
   }
 }
 
@@ -30,24 +30,24 @@ export const Popover = component$((props: PopoverProps) => {
   // By putting the polyfill in useOn without capturing external
   // scope, we can load the polyfill without waking up the framework
   useOn(
-    "qvisible",
+    'qvisible',
     $(async () => {
       const isSupported =
-        typeof HTMLElement !== "undefined" &&
-        typeof HTMLElement.prototype === "object" &&
-        "popover" in HTMLElement.prototype;
-      console.log("POLYFILL:", !isSupported);
+        typeof HTMLElement !== 'undefined' &&
+        typeof HTMLElement.prototype === 'object' &&
+        'popover' in HTMLElement.prototype;
+      console.log('POLYFILL:', !isSupported);
       if (isSupported) return;
       document.__NEEDS_POPOVER__ = true;
-      if (document.querySelector("style[data-qwik-ui-popover-polyfill]"))
+      if (document.querySelector('style[data-qwik-ui-popover-polyfill]'))
         return;
       const [{ default: css }] = await Promise.all([
-        import("@oddbird/popover-polyfill/css?inline"),
-        import("@oddbird/popover-polyfill"),
+        import('@oddbird/popover-polyfill/css?inline'),
+        import('@oddbird/popover-polyfill'),
       ]);
       // Inject CSS into head
-      const styleNode = document.createElement("style");
-      styleNode.setAttribute("data-qwik-ui-popover-polyfill", "");
+      const styleNode = document.createElement('style');
+      styleNode.setAttribute('data-qwik-ui-popover-polyfill', '');
       styleNode.textContent = css;
       document.head.appendChild(styleNode);
     })
@@ -59,7 +59,7 @@ export const Popover = component$((props: PopoverProps) => {
   // the popover
   const childRef = useSignal<HTMLElement>();
   const shouldTeleportSig = useSignal(false);
-  const hasRenderedOnClientSig = useSignal(false);
+  const hasRenderedOnClientSig = useSignal(!isServer);
   useTask$(({ track, cleanup }) => {
     const poppedOut = track(() => shouldTeleportSig.value);
     if (isServer || !poppedOut) return;
@@ -75,12 +75,12 @@ export const Popover = component$((props: PopoverProps) => {
     }
 
     let portalWrapper: HTMLDivElement | null = document.querySelector(
-      "div[data-qwik-ui-popover-polyfill]"
+      'div[data-qwik-ui-popover-polyfill]'
     );
     if (!portalWrapper) {
-      portalWrapper = document.createElement("div");
-      portalWrapper.setAttribute("data-qwik-ui-popover-polyfill", "");
-      portalWrapper.style.position = "absolute";
+      portalWrapper = document.createElement('div');
+      portalWrapper.setAttribute('data-qwik-ui-popover-polyfill', '');
+      portalWrapper.style.position = 'absolute';
       document.body.appendChild(portalWrapper!);
     }
     portalWrapper.appendChild(childRef.value!);
@@ -95,16 +95,17 @@ export const Popover = component$((props: PopoverProps) => {
   // This forces a re-render when the signal changes
   const forceRerender = !!hasRenderedOnClientSig.value;
   if (forceRerender) {
-    console.log("yey rerendered");
+    console.log('yey rerendered');
     // Now pop out again to run the task
     setTimeout(() => (shouldTeleportSig.value = true), 0);
   }
 
   return (
-    <div ref={baseRef}>
+    <div ref={baseRef} on:qvisible={props['on:qvisible']}>
       <div
         data-popover
         {...props}
+        on:qvisible={undefined}
         onToggle$={(e: ToggleEvent) => {
           if (!document.__NEEDS_POPOVER__) {
             return;
@@ -112,7 +113,7 @@ export const Popover = component$((props: PopoverProps) => {
 
           console.log(`TOGGLE!`);
 
-          shouldTeleportSig.value = e.newState === "open";
+          shouldTeleportSig.value = e.newState === 'open';
         }}
         ref={childRef}
         popover
