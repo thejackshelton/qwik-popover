@@ -7,11 +7,13 @@ import {
   useOn,
   $,
   useTask$,
+  useStyles$,
 } from "@builder.io/qwik";
 
 import { isServer } from "@builder.io/qwik/build";
+import popoverStyles from "./popover.css?inline";
 
-type PopoverRootProps = QwikIntrinsicElements["div"];
+type PopoverProps = QwikIntrinsicElements["div"];
 
 declare global {
   interface Document {
@@ -22,7 +24,9 @@ declare global {
   }
 }
 
-export const Popover = component$((props: PopoverRootProps) => {
+export const Popover = component$((props: PopoverProps) => {
+  useStyles$(popoverStyles);
+
   // By putting the polyfill in useOn without capturing external
   // scope, we can load the polyfill without waking up the framework
   useOn(
@@ -49,34 +53,37 @@ export const Popover = component$((props: PopoverRootProps) => {
     })
   );
 
+  // original parent before teleport
   const baseRef = useSignal<HTMLElement>();
+
+  // the popover
   const childRef = useSignal<HTMLElement>();
   const shouldTeleportSig = useSignal(false);
-  const didClientRenderSig = useSignal(false);
+  const hasRenderedOnClientSig = useSignal(false);
   useTask$(({ track, cleanup }) => {
     const poppedOut = track(() => shouldTeleportSig.value);
     if (isServer || !poppedOut) return;
 
     // we need to rerender once on the client
-    const didClientRender = track(() => didClientRenderSig.value);
-    if (!didClientRender) {
+    const hasClientRendered = track(() => hasRenderedOnClientSig.value);
+    if (!hasClientRendered) {
       // ask to rerender
-      didClientRenderSig.value = true;
+      hasRenderedOnClientSig.value = true;
       // prepare to be called again;
       shouldTeleportSig.value = false;
       return;
     }
 
-    let containerDiv: HTMLDivElement | null = document.querySelector(
+    let portalWrapper: HTMLDivElement | null = document.querySelector(
       "div[data-qwik-ui-popover-polyfill]"
     );
-    if (!containerDiv) {
-      containerDiv = document.createElement("div");
-      containerDiv.setAttribute("data-qwik-ui-popover-polyfill", "");
-      containerDiv.style.position = "absolute";
-      document.body.appendChild(containerDiv!);
+    if (!portalWrapper) {
+      portalWrapper = document.createElement("div");
+      portalWrapper.setAttribute("data-qwik-ui-popover-polyfill", "");
+      portalWrapper.style.position = "absolute";
+      document.body.appendChild(portalWrapper!);
     }
-    containerDiv.appendChild(childRef.value!);
+    portalWrapper.appendChild(childRef.value!);
 
     cleanup(() => baseRef.value?.appendChild(childRef.value as Node));
   });
@@ -86,7 +93,7 @@ export const Popover = component$((props: PopoverRootProps) => {
   };
 
   // This forces a re-render when the signal changes
-  const forceRerender = !!didClientRenderSig.value;
+  const forceRerender = !!hasRenderedOnClientSig.value;
   if (forceRerender) {
     console.log("yey rerendered");
     // Now pop out again to run the task
@@ -96,6 +103,7 @@ export const Popover = component$((props: PopoverRootProps) => {
   return (
     <div ref={baseRef}>
       <div
+        data-popover
         {...props}
         onToggle$={(e: ToggleEvent) => {
           if (!document.__NEEDS_POPOVER__) {
