@@ -1,6 +1,5 @@
 // src/routes/impl/popover.tsx
 import {
-  type QwikIntrinsicElements,
   Slot,
   component$,
   useSignal,
@@ -13,18 +12,16 @@ import {
 import { isServer } from '@builder.io/qwik/build';
 import popoverStyles from './popover.css?inline';
 
-type PopoverProps = QwikIntrinsicElements['div'];
+type PopoverProps = { id: string };
 
 declare global {
   interface Document {
-    __NEEDS_POPOVER__?: true;
-  }
-  interface HTMLDivElement {
-    popover?: 'manual' | 'auto' | true;
+    __QUI_POPOVER_PF__?: true;
   }
 }
 
-export const Popover = component$((props: PopoverProps) => {
+export const Popover = component$(({ id, ...props }: PopoverProps) => {
+  // We must inject some minimal hiding CSS while the polyfill loads
   useStyles$(popoverStyles);
 
   // By putting the polyfill in useOn without capturing external
@@ -38,7 +35,7 @@ export const Popover = component$((props: PopoverProps) => {
         'popover' in HTMLElement.prototype;
       console.log('POLYFILL:', !isSupported);
       if (isSupported) return;
-      document.__NEEDS_POPOVER__ = true;
+      document.__QUI_POPOVER_PF__ = true;
       if (document.querySelector('style[data-qwik-ui-popover-polyfill]'))
         return;
       const [{ default: css }] = await Promise.all([
@@ -64,7 +61,8 @@ export const Popover = component$((props: PopoverProps) => {
     const poppedOut = track(() => shouldTeleportSig.value);
     if (isServer || !poppedOut) return;
 
-    // we need to rerender once on the client
+    // We need to rerender once on the client to register the slot
+    // This allows us to move the wrapping div and Qwik will still find the slot inside
     const hasClientRendered = track(() => hasRenderedOnClientSig.value);
     if (!hasClientRendered) {
       // ask to rerender
@@ -100,21 +98,26 @@ export const Popover = component$((props: PopoverProps) => {
     setTimeout(() => (shouldTeleportSig.value = true), 0);
   }
 
+  /**
+   * We put our popover div in a div we control so we can teleport it out and back without worry
+   */
   return (
-    <div ref={baseRef} on:qvisible={props['on:qvisible']}>
+    <div ref={baseRef} {...props}>
       <div
-        data-popover
-        {...props}
-        on:qvisible={undefined}
-        onToggle$={(e: ToggleEvent) => {
-          if (!document.__NEEDS_POPOVER__) {
-            return;
+        id={id}
+        onToggle$={
+          // isServer || document.__QUI_POPOVER_PF__?
+          (e: ToggleEvent) => {
+            if (!document.__QUI_POPOVER_PF__) {
+              return;
+            }
+
+            console.log(`TOGGLE!`);
+
+            shouldTeleportSig.value = e.newState === 'open';
           }
-
-          console.log(`TOGGLE!`);
-
-          shouldTeleportSig.value = e.newState === 'open';
-        }}
+          // : undefined
+        }
         ref={childRef}
         popover
       >

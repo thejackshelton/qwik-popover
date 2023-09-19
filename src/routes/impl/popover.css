@@ -1,4 +1,6 @@
+/* This only applies when popover isn't supported */
 @supports not selector(:popover-open) {
+  /* The polyfill adds this class when popped out */
   [popover]:not(.\:popover-open) {
     display: none !important;
   }
