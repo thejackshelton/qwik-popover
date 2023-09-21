@@ -12,7 +12,7 @@ import {
 import { isServer } from '@builder.io/qwik/build';
 import popoverStyles from './popover.css?inline';
 
-type PopoverProps = { id: string };
+type PopoverProps = { id: string; popover?: string };
 
 declare global {
   interface Document {
@@ -20,53 +20,77 @@ declare global {
   }
 }
 
+export const loadPolyfill$ = $(async () => {
+  const isSupported =
+    typeof HTMLElement !== 'undefined' &&
+    typeof HTMLElement.prototype === 'object' &&
+    'popover' in HTMLElement.prototype;
+  console.log('POLYFILL:', !isSupported);
+  if (isSupported) return;
+  document.__QUI_POPOVER_PF__ = true;
+  if (document.querySelector('style[data-qwik-ui-popover-polyfill]')) return;
+  // Run the polyfill and get the CSS
+  const [, { default: css }] = await Promise.all([
+    import('@oddbird/popover-polyfill'),
+    import('@oddbird/popover-polyfill/dist/popover.css?inline'),
+  ]);
+  // Inject the polyfill CSS into head
+  const styleNode = document.createElement('style');
+  styleNode.setAttribute('data-qwik-ui-popover-polyfill', '');
+  styleNode.textContent = css;
+  document.head.appendChild(styleNode);
+});
+
+// This component is a polyfill for the popover API
+// It is complex because it optimizes for supported browsers
 export const Popover = component$((props: PopoverProps) => {
+  // On supported browsers (no SSR), just render the popover
+  if (
+    !isServer &&
+    !document.__QUI_POPOVER_PF__ &&
+    typeof HTMLElement !== 'undefined' &&
+    typeof HTMLElement.prototype === 'object' &&
+    'popover' in HTMLElement.prototype
+  ) {
+    return (
+      <div id={props.id} popover={props.popover ?? true}>
+        <Slot />
+      </div>
+    );
+  }
+  // The below applies to SSR and unsupported browsers
+
   // We must inject some minimal hiding CSS while the polyfill loads
   useStyles$(popoverStyles);
 
   // By putting the polyfill in useOn without capturing external
-  // scope, we can load the polyfill without waking up the framework
-  useOn(
-    'qvisible',
-    $(async () => {
-      const isSupported =
-        typeof HTMLElement !== 'undefined' &&
-        typeof HTMLElement.prototype === 'object' &&
-        'popover' in HTMLElement.prototype;
-      console.log('POLYFILL:', !isSupported);
-      if (isSupported) return;
-      document.__QUI_POPOVER_PF__ = true;
-      if (document.querySelector('style[data-qwik-ui-popover-polyfill]'))
-        return;
-      const [{ default: css }] = await Promise.all([
-        import('@oddbird/popover-polyfill/dist/popover.css?inline'),
-        import('@oddbird/popover-polyfill'),
-      ]);
-      // Inject CSS into head
-      const styleNode = document.createElement('style');
-      styleNode.setAttribute('data-qwik-ui-popover-polyfill', '');
-      styleNode.textContent = css;
-      document.head.appendChild(styleNode);
-    })
-  );
+  // scope, we can load the polyfill on load without waking up the framework
+  // Note, this event only happens once per page load
+  useOn('qvisible', loadPolyfill$);
 
   // original parent before teleport
   const baseRef = useSignal<HTMLElement>();
 
   // the popover
   const childRef = useSignal<HTMLElement>();
+
+  // do we need to teleport?
   const shouldTeleportSig = useSignal(false);
-  const hasRenderedOnClientSig = useSignal(!isServer);
+  // have we rendered on the client yet? 0: no, 1: from start, 2: from task
+  const hasRenderedOnClientSig = useSignal(isServer ? 0 : 1);
+
+  // Teleport the popover to the body if needed
   useTask$(({ track, cleanup }) => {
     const poppedOut = track(() => shouldTeleportSig.value);
-    if (isServer || !poppedOut) return;
+    // During SSR, this will always be false and just tracks the signal
+    if (!poppedOut) return;
 
     // We need to rerender once on the client to register the slot
     // This allows us to move the wrapping div and Qwik will still find the slot inside
     const hasClientRendered = track(() => hasRenderedOnClientSig.value);
     if (!hasClientRendered) {
       // ask to rerender
-      hasRenderedOnClientSig.value = true;
+      hasRenderedOnClientSig.value = 2;
       // prepare to be called again;
       shouldTeleportSig.value = false;
       return;
@@ -86,17 +110,23 @@ export const Popover = component$((props: PopoverProps) => {
     cleanup(() => baseRef.value?.appendChild(childRef.value as Node));
   });
 
-  type ToggleEvent = {
-    newState: string;
-  };
-
   // This forces a re-render when the signal changes
-  const forceRerender = !!hasRenderedOnClientSig.value;
-  if (forceRerender) {
+  const forcedRerender = hasRenderedOnClientSig.value === 2;
+  if (forcedRerender) {
     console.log('yey rerendered');
     // Now pop out again to run the task
     setTimeout(() => (shouldTeleportSig.value = true), 0);
   }
+
+  // If we are rendering on on unsupported browser without SSR, we might need to load the polyfill
+  if (!isServer && !document.__QUI_POPOVER_PF__) {
+    // We don't await this because we don't want to block the render
+    // The user most likely won't click a popover trigger before the polyfill loads
+    loadPolyfill$.resolve().then((fn) => fn());
+  }
+  type ToggleEvent = {
+    newState: string;
+  };
 
   /**
    * We put our popover div in a div we control so we can teleport it out and back without worry
@@ -105,25 +135,22 @@ export const Popover = component$((props: PopoverProps) => {
    */
   return (
     <>
-      <div data-qui-popover-pf />
-      <div ref={baseRef}>
+      {isServer && <div data-qui-popover-pf />}
+      <div ref={baseRef} data-qui-popover-base>
         <div
           id={props.id}
-          onToggle$={
-            isServer || document.__QUI_POPOVER_PF__
-              ? $((e: ToggleEvent) => {
-                  if (!document.__QUI_POPOVER_PF__) {
-                    return;
-                  }
+          onToggle$={$((e: ToggleEvent) => {
+            if (!document.__QUI_POPOVER_PF__) {
+              // We resumed on a supported browser, no action needed
+              return;
+            }
 
-                  console.log(`TOGGLE!`);
+            console.log(`TOGGLE!`);
 
-                  shouldTeleportSig.value = e.newState === 'open';
-                })
-              : undefined
-          }
+            shouldTeleportSig.value = e.newState === 'open';
+          })}
           ref={childRef}
-          popover
+          popover={props.popover ?? true}
         >
           <Slot />
         </div>

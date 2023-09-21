@@ -12,3 +12,7 @@
     display: none !important;
   }
 }
+/* Make sure our supporting divs don't change the document layout */
+[data-qui-popover-base],[data-qui-popover-pf] {
+  position: absolute;
+}
